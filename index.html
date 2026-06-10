@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0A0A0F">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Pulse</title>
+<style>
+:root{
+  --bg:#0A0A0F; --card:rgba(255,255,255,.045); --card2:rgba(255,255,255,.08);
+  --border:rgba(255,255,255,.09); --text:#F2F3F7; --dim:#8A8F9E; --dim2:#5C6170;
+  --accent:#4D9FFF; --accent2:#7BD3FF; --good:#34D399; --warn:#F59E0B; --bad:#F87171;
+  --radius:18px; --tabbar-h:78px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+  font-size:16px; line-height:1.45; overscroll-behavior-y:none}
+body{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
+header{position:sticky; top:0; z-index:30; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  background:rgba(10,10,15,.72); border-bottom:1px solid var(--border);
+  padding:calc(10px + env(safe-area-inset-top)) 20px 10px; display:flex; align-items:center; gap:10px}
+header .logo{width:26px;height:26px;flex:none}
+header h1{font-size:19px; font-weight:700; letter-spacing:-.02em; margin:0; flex:1}
+header .gear{font-size:20px; color:var(--dim); background:none; border:none; padding:6px; cursor:pointer}
+main{padding:16px 16px 8px; max-width:640px; margin:0 auto}
+h2{font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); margin:22px 4px 10px}
+.card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:16px; margin-bottom:12px}
+.card.tap{cursor:pointer; transition:transform .08s ease, background .15s}
+.card.tap:active{transform:scale(.985); background:var(--card2)}
+.row{display:flex; align-items:center; gap:10px}
+.grow{flex:1; min-width:0}
+.title{font-weight:650; font-size:16px; letter-spacing:-.01em}
+.sub{color:var(--dim); font-size:13px; margin-top:3px}
+.chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+.chip{font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:99px;
+  background:rgba(77,159,255,.13); color:var(--accent2); border:1px solid rgba(77,159,255,.22)}
+.chip.cat{background:rgba(52,211,153,.12); color:var(--good); border-color:rgba(52,211,153,.25)}
+.chip.hold{background:rgba(245,158,11,.14); color:var(--warn); border-color:rgba(245,158,11,.3)}
+.badge{font-size:11px; font-weight:700; padding:3px 8px; border-radius:7px; flex:none}
+.badge.sched{background:rgba(77,159,255,.16); color:var(--accent2)}
+.badge.pool{background:rgba(255,255,255,.08); color:var(--dim)}
+.badge.pub{background:rgba(52,211,153,.13); color:var(--good)}
+.btn{display:block; width:100%; padding:14px; border-radius:14px; border:none; font-size:16px;
+  font-weight:650; cursor:pointer; background:var(--accent); color:#fff; margin-top:10px}
+.btn.ghost{background:var(--card2); color:var(--text); border:1px solid var(--border)}
+.btn.warn{background:rgba(245,158,11,.16); color:var(--warn); border:1px solid rgba(245,158,11,.3)}
+.btn.small{width:auto; display:inline-block; padding:9px 16px; font-size:14px; margin-right:8px}
+.btn:disabled{opacity:.45}
+input,textarea,select{width:100%; background:rgba(255,255,255,.06); border:1px solid var(--border);
+  border-radius:13px; color:var(--text); font-size:16px; padding:13px; margin-top:8px;
+  font-family:inherit; outline:none}
+input:focus,textarea:focus{border-color:var(--accent)}
+textarea{min-height:120px; resize:vertical; line-height:1.5}
+label{font-size:13px; font-weight:600; color:var(--dim); display:block; margin-top:14px}
+.tabbar{position:fixed; bottom:0; left:0; right:0; z-index:40; display:flex;
+  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  background:rgba(10,10,15,.78); border-top:1px solid var(--border);
+  padding:8px 6px calc(8px + env(safe-area-inset-bottom)); height:auto}
+.tabbar button{flex:1; background:none; border:none; color:var(--dim2); font-size:10.5px;
+  font-weight:600; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding:4px 0; font-family:inherit}
+.tabbar button .ic{font-size:21px; line-height:1}
+.tabbar button.on{color:var(--accent2)}
+.overlay{position:fixed; inset:0; z-index:50; background:var(--bg); overflow-y:auto; display:none;
+  padding-bottom:40px}
+.overlay.show{display:block}
+.overlay .bar{position:sticky; top:0; z-index:5; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  background:rgba(10,10,15,.8); border-bottom:1px solid var(--border);
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px; display:flex; align-items:center; gap:12px}
+.overlay .bar button{background:none; border:none; color:var(--accent); font-size:16px; font-weight:600;
+  cursor:pointer; padding:4px; font-family:inherit}
+.overlay .bar .t{flex:1; font-weight:700; font-size:16px; white-space:nowrap; overflow:hidden;
+  text-overflow:ellipsis; text-align:center}
+.overlay .inner{padding:16px; max-width:640px; margin:0 auto}
+.postbody{white-space:pre-wrap; font-size:15.5px; line-height:1.55; background:var(--card);
+  border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-top:12px}
+.media-img{width:100%; border-radius:var(--radius); border:1px solid var(--border); margin-top:12px; display:block}
+.stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.stat{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px}
+.stat .v{font-size:24px; font-weight:750; letter-spacing:-.02em; margin-top:2px}
+.stat .k{font-size:12px; color:var(--dim); font-weight:600}
+.stat .d{font-size:12px; font-weight:700; margin-top:2px}
+.up{color:var(--good)} .down{color:var(--bad)} .flat{color:var(--dim)}
+.tip{display:flex; gap:10px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border)}
+.tip:last-child{border-bottom:none}
+.tip .e{flex:none; font-size:17px}
+.tip .x{font-size:14px; color:var(--text)}
+.empty{text-align:center; color:var(--dim); padding:38px 20px; font-size:14.5px}
+.empty .e{font-size:34px; display:block; margin-bottom:10px}
+#toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(var(--tabbar-h) + 18px);
+  z-index:99; background:#1D1F2A; border:1px solid var(--border); color:var(--text); font-size:14px;
+  font-weight:600; padding:11px 18px; border-radius:99px; opacity:0; transition:opacity .25s;
+  pointer-events:none; max-width:86vw; text-align:center}
+#toast.show{opacity:1}
+.spin{display:inline-block; width:17px; height:17px; border:2.5px solid rgba(255,255,255,.2);
+  border-top-color:var(--accent); border-radius:50%; animation:sp .7s linear infinite; vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.skel{height:84px; border-radius:var(--radius); background:linear-gradient(100deg,var(--card) 40%,var(--card2) 50%,var(--card) 60%);
+  background-size:200% 100%; animation:sh 1.3s infinite; margin-bottom:12px}
+@keyframes sh{to{background-position:-200% 0}}
+.news-src{font-size:11.5px; color:var(--dim2); font-weight:700; text-transform:uppercase; letter-spacing:.06em}
+a{color:var(--accent2)}
+.seg{display:flex; background:var(--card); border:1px solid var(--border); border-radius:13px; padding:3px; margin-top:8px}
+.seg button{flex:1; border:none; background:none; color:var(--dim); font-weight:650; font-size:13.5px;
+  padding:8px; border-radius:10px; cursor:pointer; font-family:inherit}
+.seg button.on{background:var(--accent); color:#fff}
+.hint{font-size:12.5px; color:var(--dim2); margin-top:8px; line-height:1.45}
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="logo" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#4D9FFF" fill-opacity=".15"/><path d="M5 18h5l3-8 4 13 3-9 2 4h5" stroke="#4D9FFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <h1>Pulse</h1>
+  <button class="gear" onclick="showTab('settings')">⚙︎</button>
+</header>
+
+<main id="view"></main>
+
+<nav class="tabbar">
+  <button id="tab-queue" onclick="showTab('queue')"><span class="ic">📋</span>Queue</button>
+  <button id="tab-metrics" onclick="showTab('metrics')"><span class="ic">📊</span>Metrics</button>
+  <button id="tab-compose" onclick="showTab('compose')"><span class="ic">✍️</span>Compose</button>
+  <button id="tab-news" onclick="showTab('news')"><span class="ic">📰</span>News</button>
+</nav>
+
+<div class="overlay" id="detail">
+  <div class="bar">
+    <button onclick="closeDetail()">‹ Back</button>
+    <div class="t" id="detail-title"></div>
+    <button id="detail-action" onclick="toggleEdit()">Edit</button>
+  </div>
+  <div class="inner" id="detail-body"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ====== config ====== */
+const CFG = { owner:"MatiasR95", repo:"linkedin-writer", branch:"main" };
+const API = `https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/`;
+const CATS = ["auto","assurant-dw","concept","business","industry-news","career","passions"];
+
+/* ====== utils ====== */
+const $ = id => document.getElementById(id);
+const token = () => localStorage.getItem("pulse_token") || "";
+const enc = s => btoa(unescape(encodeURIComponent(s)));
+const dec = s => decodeURIComponent(escape(atob(s.replace(/\n/g,""))));
+const esc = s => (s||"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function toast(msg, ms=2600){ const t=$("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"), ms); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+
+/* ====== GitHub API ====== */
+async function gh(path, opts={}){
+  const r = await fetch(API + path + (opts.method ? "" : `?ref=${CFG.branch}&_=${Date.now()}`), {
+    method: opts.method || "GET",
+    headers: Object.assign({
+      "Authorization": "Bearer " + token(),
+      "Accept": opts.raw ? "application/vnd.github.raw+json" : "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    }, opts.method ? {"Content-Type":"application/json"} : {}),
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if (r.status === 404 && opts.ok404) return null;
+  if (!r.ok){ const x = await r.text(); throw new Error(`GitHub ${r.status}: ${x.slice(0,160)}`); }
+  if (opts.raw) return r.text();
+  if (opts.blob) return r.blob();
+  return r.json();
+}
+const ghList = (dir) => gh(dir, {ok404:true}).then(x => Array.isArray(x) ? x : []);
+const ghText = (path) => gh(path, {raw:true, ok404:true});
+async function ghBlobURL(path){
+  const r = await fetch(API + path + `?ref=${CFG.branch}`, { headers:{
+    "Authorization":"Bearer "+token(), "Accept":"application/vnd.github.raw+json"}});
+  if(!r.ok) return null;
+  return URL.createObjectURL(await r.blob());
+}
+async function ghPut(path, text, message, sha){
+  const body = { message, content: enc(text), branch: CFG.branch };
+  if (sha) body.sha = sha;
+  return gh(path, { method:"PUT", body });
+}
+async function ghSha(path){ const m = await gh(path, {ok404:true}); return m && m.sha; }
+async function ghDelete(path, message){
+  const sha = await ghSha(path); if(!sha) return;
+  return gh(path, { method:"DELETE", body:{ message, sha, branch: CFG.branch }});
+}
+
+/* ====== post parsing ====== */
+function parsePost(name, raw){
+  let fm = {}, body = raw;
+  const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
+  if (m){
+    body = raw.slice(m[0].length);
+    for (const line of m[1].split(/\r?\n/)){
+      const i = line.indexOf(":");
+      if (i > 0) fm[line.slice(0,i).trim()] = line.slice(i+1).trim().replace(/^["']|["']$/g,"");
+    }
+  }
+  const headIdx = body.search(/\r?\n##\s/);
+  const text = (headIdx >= 0 ? body.slice(0, headIdx) : body)
+    .replace(/<!--[\s\S]*?-->/g,"").replace(/\n{3,}/g,"\n\n").trim();
+  const rest = headIdx >= 0 ? body.slice(headIdx) : "";
+  const tags = [...new Set((text.match(/#[A-Za-z0-9]+/g) || []))];
+  let cat = fm.category || "";
+  if (!cat && fm.topic_tags) cat = fm.topic_tags.replace(/[\[\]]/g,"").split(",")[0].trim();
+  return { name, fm, fmBlock: m ? m[0] : "", text, rest, tags, cat, raw };
+}
+function recompose(p, newText){
+  return p.fmBlock + newText.trim() + "\n" + (p.rest ? "\n" + p.rest.replace(/^\r?\n/,"") : "");
+}
+
+/* ====== tabs ====== */
+let cur = "queue";
+function showTab(name){
+  cur = name;
+  ["queue","metrics","compose","news"].forEach(t => {
+    const b = $("tab-"+t); if (b) b.classList.toggle("on", t === name);
+  });
+  closeDetail();
+  if (!token() && name !== "settings"){ renderSettings(true); return; }
+  ({queue:renderQueue, metrics:renderMetrics, compose:renderCompose,
+    news:renderNews, settings:renderSettings})[name]();
+}
+
+/* ====== QUEUE ====== */
+let queueCache = [];
+async function renderQueue(){
+  const v = $("view");
+  v.innerHTML = "<h2>Publishing queue</h2><div class='skel'></div><div class='skel'></div>";
+  try{
+    const [ready, pool, published] = await Promise.all([
+      ghList("posts/ready"), ghList("posts/pool"), ghList("posts/published")]);
+    const holds = new Set([...ready, ...pool].filter(f => f.name.endsWith(".hold"))
+      .map(f => f.name.replace(/\.hold$/,"")));
+    const mds = dir => list => list.filter(f => f.name.endsWith(".md") && !f.name.startsWith("_"))
+      .map(f => ({...f, dir}));
+    const files = [...mds("posts/ready")(ready), ...mds("posts/pool")(pool)];
+    queueCache = await Promise.all(files.map(async f => {
+      const raw = await ghText(`${f.dir}/${f.name}`);
+      const p = parsePost(f.name, raw);
+      p.dir = f.dir; p.held = holds.has(f.name.replace(/\.md$/,""));
+      return p;
+    }));
+    queueCache.sort((a,b) => (a.fm.date||"9999") < (b.fm.date||"9999") ? -1 : 1);
+
+    let html = "<h2>Publishing queue</h2>";
+    if (!queueCache.length) html += "<div class='empty'><span class='e'>🌙</span>Queue is empty — the next Create DRAFT routine will refill it.</div>";
+    queueCache.forEach((p,i) => {
+      const sched = p.fm.date
+        ? `<span class="badge sched">📅 ${esc(p.fm.date)}${p.fm.scheduled_ar ? " · " + esc(p.fm.scheduled_ar.split(" ").slice(1).join(" ")) : ""}</span>`
+        : `<span class="badge pool">pool · next free slot</span>`;
+      html += `<div class="card tap" onclick="openDetail(${i})">
+        <div class="row"><div class="grow">
+          <div class="title">${esc(p.fm.title || p.name)}</div>
+          <div class="sub">${sched} ${p.held ? '<span class="chip hold">⏸ HELD</span>' : ""}</div>
+        </div><div style="color:var(--dim2)">›</div></div>
+        <div class="chips">${p.cat ? `<span class="chip cat">${esc(p.cat)}</span>` : ""}
+          ${p.tags.slice(0,4).map(t => `<span class="chip">${esc(t)}</span>`).join("")}</div>
+      </div>`;
+    });
+    const pubMd = published.filter(f => f.name.endsWith(".md")).slice(-3).reverse();
+    if (pubMd.length){
+      html += "<h2>Recently published</h2>";
+      pubMd.forEach(f => { html += `<div class="card"><div class="row"><div class="grow">
+        <div class="title" style="font-size:14.5px">${esc(f.name.replace(/\.md$/,""))}</div>
+        </div><span class="badge pub">✓ live</span></div></div>`; });
+    }
+    v.innerHTML = html;
+  }catch(e){ v.innerHTML = `<div class='empty'><span class='e'>⚠️</span>${esc(e.message)}</div>`; }
+}
+
+/* ====== detail / edit ====== */
+let detailPost = null, editing = false;
+async function openDetail(i){
+  detailPost = queueCache[i]; editing = false;
+  $("detail-title").textContent = detailPost.fm.title || detailPost.name;
+  $("detail-action").textContent = "Edit";
+  const d = $("detail-body");
+  const p = detailPost;
+  const when = p.fm.date
+    ? `Publishes <b>${esc(p.fm.date)}</b>${p.fm.scheduled_ar ? " at " + esc(p.fm.scheduled_ar.split(" ").slice(1).join(" ")) : ""} ${p.fm.scheduled_et ? "(" + esc(p.fm.scheduled_et.split(" ").slice(1).join(" ")) + ")" : ""}`
+    : "In the pool — publishes on the next free weekday slot";
+  d.innerHTML = `
+    <div class="sub" style="font-size:14px">${when}</div>
+    <div class="chips">${p.cat ? `<span class="chip cat">${esc(p.cat)}</span>` : ""}
+      ${p.tags.map(t => `<span class="chip">${esc(t)}</span>`).join("")}
+      ${p.held ? '<span class="chip hold">⏸ HELD — will not publish</span>' : ""}</div>
+    <div id="media-slot"></div>
+    <div class="postbody" id="post-text">${esc(p.text)}</div>
+    <button class="btn warn" id="hold-btn" onclick="toggleHold()">${p.held ? "▶ Release hold (allow publishing)" : "⏸ Hold this post (block publishing)"}</button>`;
+  $("detail").classList.add("show"); window.scrollTo(0,0);
+  if (p.fm.media){
+    const url = await ghBlobURL(p.fm.media).catch(()=>null);
+    if (url) $("media-slot").innerHTML = `<img class="media-img" src="${url}" alt="post media">`;
+  }
+}
+function closeDetail(){ $("detail").classList.remove("show"); }
+function toggleEdit(){
+  if (!detailPost) return;
+  const slot = $("post-text"), btn = $("detail-action");
+  if (!editing){
+    editing = true; btn.textContent = "Save";
+    slot.outerHTML = `<textarea id="post-text" style="min-height:55vh; margin-top:12px">${esc(detailPost.text)}</textarea>`;
+  } else {
+    saveEdit();
+  }
+}
+async function saveEdit(){
+  const btn = $("detail-action"); btn.innerHTML = "<span class='spin'></span>";
+  try{
+    const path = `${detailPost.dir}/${detailPost.name}`;
+    const newText = $("post-text").value;
+    const sha = await ghSha(path);
+    await ghPut(path, recompose(detailPost, newText), `Edit ${detailPost.name} via Pulse`, sha);
+    detailPost.text = newText.trim(); editing = false; btn.textContent = "Edit";
+    document.querySelector("#post-text").outerHTML =
+      `<div class="postbody" id="post-text">${esc(detailPost.text)}</div>`;
+    toast("✅ Saved — the publisher will use this version");
+  }catch(e){ btn.textContent = "Save"; toast("⚠️ " + e.message, 4000); }
+}
+async function toggleHold(){
+  const p = detailPost, base = p.name.replace(/\.md$/,""), path = `${p.dir}/${base}.hold`;
+  const b = $("hold-btn"); b.disabled = true;
+  try{
+    if (p.held){ await ghDelete(path, `Release hold on ${base} via Pulse`); p.held = false;
+      toast("▶ Released — back in the publishing queue"); }
+    else { await ghPut(path, "held via Pulse app " + new Date().toISOString(), `Hold ${base} via Pulse`); p.held = true;
+      toast("⏸ Held — it will NOT publish until released"); }
+    b.disabled = false;
+    b.textContent = p.held ? "▶ Release hold (allow publishing)" : "⏸ Hold this post (block publishing)";
+  }catch(e){ b.disabled = false; toast("⚠️ " + e.message, 4000); }
+}
+
+/* ====== METRICS ====== */
+function csvRows(text){
+  if (!text) return [];
+  const lines = text.trim().split(/\r?\n/);
+  const head = lines[0].split(",");
+  return lines.slice(1).map(l => { const c = l.split(",");
+    const o = {}; head.forEach((h,i) => o[h.trim()] = (c[i]||"").trim()); return o; });
+}
+function delta(now, prev){
+  const a = parseFloat(now), b = parseFloat(prev);
+  if (isNaN(a) || isNaN(b)) return "";
+  if (b === 0) return a > 0 ? `<span class="d up">new ↑</span>` : "";
+  const pc = Math.round((a-b)/b*100);
+  if (pc === 0) return `<span class="d flat">→ steady</span>`;
+  return pc > 0 ? `<span class="d up">↑ ${pc}%</span>` : `<span class="d down">↓ ${Math.abs(pc)}%</span>`;
+}
+async function renderMetrics(){
+  const v = $("view");
+  v.innerHTML = "<h2>Profile metrics</h2><div class='skel'></div><div class='skel'></div>";
+  try{
+    const [profCsv, perfCsv] = await Promise.all([
+      ghText("data/profile-metrics.csv"), ghText("data/performance.csv")]);
+    const prof = csvRows(profCsv), perf = csvRows(perfCsv);
+    const last = prof[prof.length-1] || {}, prev = prof[prof.length-2] || {};
+    const stat = (k, label, emoji) => `<div class="stat"><div class="k">${emoji} ${label}</div>
+      <div class="v">${esc(last[k] || "—")}</div>${delta(last[k], prev[k])}</div>`;
+    let html = `<h2>Profile · ${last.date ? "logged " + esc(last.date) : "no data yet"}</h2>
+      <div class="stat-grid">
+        ${stat("profile_views","Profile views","👀")}
+        ${stat("post_impressions","Post impressions","📈")}
+        ${stat("new_connections","New connections","🤝")}
+        ${stat("followers","Followers","🛰️")}
+      </div>
+      <h2>Suggested actions</h2><div class="card">${suggestions(prof, perf)}</div>
+      <h2>Quick log (from the LinkedIn app)</h2>
+      <div class="card">
+        <div class="hint">Open LinkedIn → your profile → Analytics, copy the numbers here. ~10 seconds, once a week.</div>
+        <label>👀 Profile views</label><input id="m-views" type="number" inputmode="numeric" placeholder="${esc(last.profile_views||"e.g. 120")}">
+        <label>📈 Post impressions (last 7 days)</label><input id="m-impr" type="number" inputmode="numeric" placeholder="${esc(last.post_impressions||"e.g. 2400")}">
+        <label>🤝 New connections (this week)</label><input id="m-conn" type="number" inputmode="numeric" placeholder="e.g. 6">
+        <label>🛰️ Total followers</label><input id="m-foll" type="number" inputmode="numeric" placeholder="${esc(last.followers||"e.g. 850")}">
+        <button class="btn" id="m-save" onclick="saveMetrics()">Log this week 📊</button>
+      </div>
+      <h2>Per-post engagement</h2>`;
+    const open = perf.filter(r => !r.impressions);
+    if (perf.length === 0) html += "<div class='empty'>No posts logged yet.</div>";
+    perf.slice(-6).reverse().forEach(r => {
+      html += `<div class="card"><div class="title" style="font-size:14.5px">${esc(r.slug)}</div>
+        <div class="sub">${esc(r.date)} ${r.impressions
+          ? `· 📈 ${esc(r.impressions)} · 👍 ${esc(r.reactions)} · 💬 ${esc(r.comments)}`
+          : "· <i>engagement not logged yet</i>"}</div></div>`;
+    });
+    if (open.length) html += `<div class="hint" style="margin:4px 6px">Tip: ${open.length} post(s) above still need engagement numbers — tap Quick log next time you check LinkedIn.</div>`;
+    v.innerHTML = html;
+  }catch(e){ v.innerHTML = `<div class='empty'><span class='e'>⚠️</span>${esc(e.message)}</div>`; }
+}
+function suggestions(prof, perf){
+  const tips = [];
+  const last = prof[prof.length-1], prev = prof[prof.length-2];
+  if (prof.length < 2)
+    tips.push(["📒","Log your numbers weekly — after 2 entries Pulse starts showing trends and sharper advice."]);
+  if (last && prev){
+    const d = (k) => { const a=+last[k], b=+prev[k]; return (isNaN(a)||isNaN(b)||!b) ? 0 : (a-b)/b; };
+    if (d("post_impressions") < -0.1) tips.push(["⏰","Impressions dipped — reply to every comment within the first hour after publishing; LinkedIn boosts posts with early conversation."]);
+    if (d("post_impressions") > 0.1) tips.push(["🔥","Impressions are climbing — keep the current cadence and double down on the category of your last top post."]);
+    if (d("profile_views") < -0.1) tips.push(["💬","Profile views fell — spend 10–15 min/day commenting (genuinely) on posts from data/BI voices; comments drive profile visits."]);
+    if (d("new_connections") <= 0) tips.push(["🤝","Send 3–5 personalized invites this week to people who reacted or commented on your posts — warm invites convert best."]);
+  }
+  const withNum = perf.filter(r => +r.impressions > 0);
+  if (withNum.length >= 2){
+    const best = withNum.reduce((a,b) => +a.impressions > +b.impressions ? a : b);
+    tips.push(["🏆",`Your best recent post is <b>${esc(best.slug)}</b> (${esc(best.impressions)} impressions) — its angle (<i>${esc(best.hook_type||"?")}</i>) is worth repeating.`]);
+    const lowC = withNum.filter(r => +r.comments / +r.impressions < 0.003).length;
+    if (lowC >= 2) tips.push(["❓","Comments are low relative to reach — end with one specific, easy-to-answer question instead of a broad 'thoughts?'"]);
+  }
+  if (!tips.length) tips.push(["✨","Everything looks steady — consistency beats intensity on LinkedIn."]);
+  return tips.map(t => `<div class="tip"><span class="e">${t[0]}</span><span class="x">${t[1]}</span></div>`).join("");
+}
+async function saveMetrics(){
+  const g = id => $(id).value.trim();
+  if (!g("m-views") && !g("m-impr") && !g("m-conn") && !g("m-foll")){ toast("Enter at least one number 🙂"); return; }
+  const b = $("m-save"); b.disabled = true; b.innerHTML = "<span class='spin'></span>";
+  try{
+    const path = "data/profile-metrics.csv";
+    let text = await ghText(path);
+    if (!text) text = "date,profile_views,post_impressions,new_connections,followers,notes\n";
+    text = text.replace(/\n*$/,"\n") +
+      [todayISO(), g("m-views"), g("m-impr"), g("m-conn"), g("m-foll"), "logged via Pulse"].join(",") + "\n";
+    await ghPut(path, text, `Log profile metrics ${todayISO()} via Pulse`, await ghSha(path));
+    toast("✅ Logged!"); renderMetrics();
+  }catch(e){ toast("⚠️ " + e.message, 4000); }
+  b.disabled = false; b.textContent = "Log this week 📊";
+}
+
+/* ====== COMPOSE ====== */
+function renderCompose(){
+  $("view").innerHTML = `
+    <h2>New post idea → Claude drafts it</h2>
+    <div class="card">
+      <div class="hint">Braindump something from work, a win, a lesson, someone to thank — Claude turns it into a
+      full bilingual post on the next draft run (or sooner if you mark it priority). Write in English or Spanish, both work. 🇺🇸🇦🇷</div>
+      <label>💡 Your idea</label>
+      <textarea id="c-idea" placeholder="e.g. Today a teammate helped me untangle a tricky join and it reminded me why pairing on SQL beats struggling alone…"></textarea>
+      <label>🙌 Anyone to tag / credit? (optional)</label>
+      <input id="c-tag" placeholder="e.g. María García — helped me debug the pipeline">
+      <label>🗂 Category hint</label>
+      <select id="c-cat">${CATS.map(c => `<option>${c}</option>`).join("")}</select>
+      <label>⚡ Priority</label>
+      <div class="seg" id="c-prio">
+        <button class="on" onclick="setPrio(this,'next-draft')">Use for next draft</button>
+        <button onclick="setPrio(this,'whenever')">Whenever it fits</button>
+      </div>
+      <button class="btn" id="c-save" onclick="saveIdea()">Send to Claude ✍️</button>
+    </div>`;
+}
+let prio = "next-draft";
+function setPrio(btn, p){ prio = p;
+  btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("on"));
+  btn.classList.add("on"); }
+async function saveIdea(){
+  const idea = $("c-idea").value.trim();
+  if (idea.length < 10){ toast("Tell me a bit more 🙂"); return; }
+  const b = $("c-save"); b.disabled = true; b.innerHTML = "<span class='spin'></span>";
+  try{
+    const path = "ideas/inbox.md";
+    let text = await ghText(path);
+    if (!text) text = "# Idea Inbox\n";
+    const entry = `\n## 💡 ${todayISO()} — from Pulse (status: NEW)\n` +
+      `- **Idea:** ${idea.replace(/\r?\n/g," / ")}\n` +
+      ($("c-tag").value.trim() ? `- **Tag/credit:** ${$("c-tag").value.trim()}\n` : "") +
+      `- **Category hint:** ${$("c-cat").value}\n- **Priority:** ${prio}\n`;
+    await ghPut(path, text.replace(/\n*$/,"\n") + entry, `Idea via Pulse: ${idea.slice(0,50)}`, await ghSha(path));
+    $("c-idea").value = ""; $("c-tag").value = "";
+    toast("✅ Sent! Claude will draft it on the next run");
+  }catch(e){ toast("⚠️ " + e.message, 4000); }
+  b.disabled = false; b.textContent = "Send to Claude ✍️";
+}
+
+/* ====== NEWS ====== */
+async function renderNews(){
+  const v = $("view");
+  v.innerHTML = "<h2>Trending in Data · AI · Tech</h2><div class='skel'></div><div class='skel'></div>";
+  try{
+    const raw = await ghText("data/trending.json");
+    const feed = raw ? JSON.parse(raw) : null;
+    if (!feed || !feed.items || !feed.items.length){
+      v.innerHTML = `<h2>Trending in Data · AI · Tech</h2>
+        <div class="empty"><span class="e">📡</span>No feed yet — the daily News Scout routine fills this
+        each morning with what's trending on LinkedIn & X about Data, BI, AI and tech.</div>`;
+      return;
+    }
+    let html = `<h2>Trending · updated ${esc((feed.updated||"").slice(0,10))}</h2>`;
+    feed.items.forEach(it => {
+      html += `<div class="card">
+        <div class="news-src">${esc(it.source || "web")}</div>
+        <div class="title" style="margin-top:4px">${esc(it.title)}</div>
+        <div class="sub" style="margin-top:6px; color:var(--text); opacity:.85">${esc(it.summary || "")}</div>
+        <div class="chips">${(it.tags||[]).map(t => `<span class="chip">${esc(t)}</span>`).join("")}</div>
+        ${it.url ? `<div style="margin-top:10px"><a href="${esc(it.url)}" target="_blank" rel="noopener">Read more →</a></div>` : ""}
+        ${it.angle ? `<div class="hint">💡 Post angle: ${esc(it.angle)}</div>` : ""}
+      </div>`;
+    });
+    v.innerHTML = html;
+  }catch(e){ v.innerHTML = `<div class='empty'><span class='e'>⚠️</span>${esc(e.message)}</div>`; }
+}
+
+/* ====== SETTINGS ====== */
+function renderSettings(firstRun){
+  $("view").innerHTML = `
+    ${firstRun ? `<div class="card" style="border-color:rgba(77,159,255,.4)">
+      <div class="title">👋 Welcome to Pulse</div>
+      <div class="sub" style="margin-top:6px">Your LinkedIn engine's remote control. One thing to set up:
+      a GitHub token so the app can read your private content repo. Takes 2 minutes, once.</div></div>` : "<h2>Settings</h2>"}
+    <div class="card">
+      <div class="title" style="font-size:15px">🔑 GitHub token</div>
+      <div class="hint">Create a <b>fine-grained personal access token</b> at
+      github.com → Settings → Developer settings → Fine-grained tokens:<br><br>
+      • Repository access: <b>only ${CFG.owner}/${CFG.repo}</b><br>
+      • Permissions → Contents: <b>Read and write</b><br>
+      • Expiration: up to you (you'll re-paste when it expires)<br><br>
+      Paste it below — it stays only on this phone (local storage), never sent anywhere except github.com.</div>
+      <input id="s-token" type="password" placeholder="${token() ? "•••••••• (token saved)" : "github_pat_…"}" autocomplete="off">
+      <button class="btn" onclick="saveToken()">Save & test connection</button>
+      ${token() ? `<button class="btn ghost" onclick="localStorage.removeItem('pulse_token');toast('Token removed');renderSettings()">Sign out (remove token)</button>` : ""}
+    </div>
+    <div class="card">
+      <div class="title" style="font-size:15px">ℹ️ How it works</div>
+      <div class="hint">Everything runs in the cloud whether or not you open this app: routines draft posts
+      Mon & Wed nights and publish weekdays at 11:30 ART. Pulse is the window — see the queue, edit a post
+      (it commits straight to the repo), hold/release publishing, log metrics, send Claude ideas.</div>
+    </div>`;
+}
+async function saveToken(){
+  const t = $("s-token").value.trim();
+  if (!t){ toast("Paste a token first"); return; }
+  localStorage.setItem("pulse_token", t);
+  try{
+    await fetch(`https://api.github.com/repos/${CFG.owner}/${CFG.repo}`, {
+      headers:{ "Authorization":"Bearer " + t }}).then(r => { if(!r.ok) throw new Error("HTTP " + r.status); });
+    toast("✅ Connected to " + CFG.repo); showTab("queue");
+  }catch(e){
+    localStorage.removeItem("pulse_token");
+    toast("⚠️ Token didn't work (" + e.message + ") — check repo access + Contents permission", 5000);
+  }
+}
+
+/* ====== boot ====== */
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+showTab(token() ? "queue" : "settings");
+</script>
+</body>
+</html>

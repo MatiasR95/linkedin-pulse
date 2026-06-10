@@ -16,7 +16,8 @@ you keep on your phone.
 - ✏️ **Edit** — change a post's text right on the phone; it commits to the repo, and the
   cloud publisher uses the edited version automatically.
 - ⏸ **Hold / release** — block a post from publishing with one tap.
-- 📊 **Metrics** — weekly quick-log of LinkedIn profile numbers + trends + suggested actions.
+- 📊 **Metrics** — fully automatic: a cloud routine harvests LinkedIn's notification emails
+  weekly into the data CSVs; the app shows trends + suggested actions. Zero manual input.
 - ✍️ **Compose** — braindump an idea (EN or ES); Claude drafts it on the next cloud run.
 - 📰 **News** — daily trending Data/BI/AI topics scouted by a cloud routine.
 

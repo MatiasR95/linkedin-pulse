@@ -309,8 +309,9 @@ async function renderQueue(){
   const v = $("view");
   v.innerHTML = `<h2>${icon("queue",15)} Publishing queue</h2><div class='skel'></div><div class='skel'></div>`;
   try{
-    const [ready, pool, published] = await Promise.all([
-      ghList("posts/ready"), ghList("posts/pool"), ghList("posts/published")]);
+    const [ready, pool, published, planRaw] = await Promise.all([
+      ghList("posts/ready"), ghList("posts/pool"), ghList("posts/published"),
+      ghText("data/week-plan.json")]);
     const holds = new Set([...ready, ...pool].filter(f => f.name.endsWith(".hold"))
       .map(f => f.name.replace(/\.hold$/,"")));
     const mds = dir => list => list.filter(f => f.name.endsWith(".md") && !f.name.startsWith("_"))
@@ -324,9 +325,24 @@ async function renderQueue(){
     }));
     queueCache.sort((a,b) => (a.fm.date||"9999") < (b.fm.date||"9999") ? -1 : 1);
 
-    let html = `<h2>${icon("queue",15)} Publishing queue</h2>`;
-    if (!queueCache.length) html += `<div class='empty'>${icon("moon")}Queue is empty — the next Create DRAFT routine will refill it.</div>`;
     const today = todayISO();
+    let html = "";
+    // This week's varying posting slots (from plan_week.py)
+    try {
+      const plan = planRaw ? JSON.parse(planRaw) : null;
+      if (plan && plan.slots && plan.slots.length) {
+        const pills = plan.slots.map(s => {
+          const done = s.date < today, isToday = s.date === today;
+          const wd = s.weekday.slice(0, 3);
+          return `<span class="chip" style="${done ? 'opacity:.45' : ''}${isToday ? ';background:rgba(52,211,153,.16);color:var(--good);border-color:rgba(52,211,153,.35)' : ''}">${done ? '✓ ' : ''}${wd} ${esc(s.ar_time)}</span>`;
+        }).join("");
+        html += `<h2>${icon("metrics",15)} This week's slots <span style="text-transform:none;letter-spacing:0;color:var(--dim2);font-weight:500">· varies weekly</span></h2>
+          <div class="card"><div class="hint" style="margin:0 0 9px">Auto-picked days & times (ART), 10 AM–12 PM ET window — different every week.</div>
+          <div class="chips" style="margin-top:0">${pills}</div></div>`;
+      }
+    } catch (e) { /* plan optional */ }
+    html += `<h2>${icon("queue",15)} Publishing queue</h2>`;
+    if (!queueCache.length) html += `<div class='empty'>${icon("moon")}Queue is empty — the next Create DRAFT routine will refill it.</div>`;
     queueCache.forEach((p,i) => {
       const time = p.fm.scheduled_ar ? p.fm.scheduled_ar.split(" ").slice(1).join(" ") : "11:30 ART";
       const sched = p.fm.date

@@ -394,6 +394,10 @@ async function openDetail(i){
       ${p.tags.map(t => `<span class="chip">${esc(t)}</span>`).join("")}
       ${p.held ? '<span class="chip hold">⏸ HELD — will not publish</span>' : ""}</div>
     <div id="media-slot"></div>
+    ${p.fm.canva_edit ? `<a class="btn ghost" style="text-decoration:none" href="${esc(p.fm.canva_edit)}"
+      target="_blank" rel="noopener">🎨 Edit design in Canva</a>
+      <div class="hint" style="margin-top:6px">Canva edits don't auto-update the posted image —
+      after editing, ask Claude to re-export it (or it posts the current version).</div>` : ""}
     <div class="postbody" id="post-text">${esc(p.text)}</div>
     <button class="btn warn" id="hold-btn" onclick="toggleHold()">${p.held ? "▶ Release hold (allow publishing)" : "⏸ Hold this post (block publishing)"}</button>`;
   $("detail").classList.add("show"); window.scrollTo(0,0);

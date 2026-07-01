@@ -323,7 +323,7 @@ async function renderQueue(){
       p.dir = f.dir; p.held = holds.has(f.name.replace(/\.md$/,""));
       return p;
     }));
-    queueCache.sort((a,b) => (a.fm.date||"9999") < (b.fm.date||"9999") ? -1 : 1);
+    queueCache.sort((a,b) => (a.fm.scheduled_et||"9999") < (b.fm.scheduled_et||"9999") ? -1 : 1);
 
     const today = todayISO();
     let html = "";
@@ -344,9 +344,10 @@ async function renderQueue(){
     html += `<h2>${icon("queue",15)} Publishing queue</h2>`;
     if (!queueCache.length) html += `<div class='empty'>${icon("moon")}Queue is empty — the next Create DRAFT routine will refill it.</div>`;
     queueCache.forEach((p,i) => {
-      const time = p.fm.scheduled_ar ? p.fm.scheduled_ar.split(" ").slice(1).join(" ") : "11:30 ART";
-      const sched = p.fm.date
-        ? `<span class="badge sched">${p.fm.date === today ? "TODAY" : esc(fmtDate(p.fm.date))} · ${esc(time)}</span>`
+      const schedDate = p.fm.scheduled_et ? p.fm.scheduled_et.slice(0,10) : "";
+      const time = p.fm.scheduled_ar ? p.fm.scheduled_ar.split(" ").slice(1).join(" ") : "";
+      const sched = schedDate
+        ? `<span class="badge sched">${schedDate === today ? "TODAY" : esc(fmtDate(schedDate))} · ${esc(time)}</span>`
         : `<span class="badge pool">pool · next free slot</span>`;
       html += `<div class="card tap" onclick="openDetail(${i})">
         <div class="thumb ph" id="th-${i}">${icon("img")}</div>
@@ -385,8 +386,9 @@ async function openDetail(i){
   $("detail-action").textContent = "Edit";
   const d = $("detail-body");
   const p = detailPost;
-  const when = p.fm.date
-    ? `Publishes <b>${esc(fmtDate(p.fm.date))}</b>${p.fm.scheduled_ar ? " at " + esc(p.fm.scheduled_ar.split(" ").slice(1).join(" ")) : ""} ${p.fm.scheduled_et ? "(" + esc(p.fm.scheduled_et.split(" ").slice(1).join(" ")) + ")" : ""}`
+  const schedDate = p.fm.scheduled_et ? p.fm.scheduled_et.slice(0,10) : "";
+  const when = schedDate
+    ? `Publishes <b>${esc(fmtDate(schedDate))}</b>${p.fm.scheduled_ar ? " at " + esc(p.fm.scheduled_ar.split(" ").slice(1).join(" ")) : ""} ${p.fm.scheduled_et ? "(" + esc(p.fm.scheduled_et.split(" ").slice(1).join(" ")) + ")" : ""}`
     : "In the pool — publishes on the next free weekday slot";
   d.innerHTML = `
     <div class="sub" style="font-size:14px">${when}</div>
@@ -399,6 +401,8 @@ async function openDetail(i){
       <div class="hint" style="margin-top:6px">Canva edits don't auto-update the posted image —
       after editing, ask Claude to re-export it (or it posts the current version).</div>` : ""}
     <div class="postbody" id="post-text">${esc(p.text)}</div>
+    <button class="btn ghost" id="resched-btn" onclick="openReschedule()">${schedDate ? "🗓 Change publish date" : "🗓 Pick a publish date"}</button>
+    <div id="resched-slot"></div>
     <button class="btn warn" id="hold-btn" onclick="toggleHold()">${p.held ? "▶ Release hold (allow publishing)" : "⏸ Hold this post (block publishing)"}</button>`;
   $("detail").classList.add("show"); window.scrollTo(0,0);
   if (p.fm.media){
@@ -441,6 +445,127 @@ async function toggleHold(){
     b.disabled = false;
     b.textContent = p.held ? "▶ Release hold (allow publishing)" : "⏸ Hold this post (block publishing)";
   }catch(e){ b.disabled = false; toast("⚠️ " + e.message, 4000); }
+}
+
+/* ====== reschedule (change / clear a post's publish date) ====== */
+function setFrontmatter(fmBlock, updates){
+  const m = fmBlock.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?$/);
+  if (!m) return fmBlock;
+  let lines = m[1].split(/\r?\n/);
+  const seen = new Set();
+  lines = lines.map(line => {
+    const i = line.indexOf(":");
+    if (i < 0) return line;
+    const k = line.slice(0,i).trim();
+    if (Object.prototype.hasOwnProperty.call(updates, k)){ seen.add(k); return `${k}: "${updates[k]}"`; }
+    return line;
+  });
+  Object.keys(updates).forEach(k => { if (!seen.has(k)) lines.push(`${k}: "${updates[k]}"`); });
+  return "---\n" + lines.join("\n") + "\n---\n";
+}
+function parseCSVLine(line){
+  const out = []; let cur = "", inQ = false;
+  for (let i = 0; i < line.length; i++){
+    const c = line[i];
+    if (inQ){
+      if (c === '"'){ if (line[i+1] === '"'){ cur += '"'; i++; } else inQ = false; }
+      else cur += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ","){ out.push(cur); cur = ""; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+function csvField(v){ v = v == null ? "" : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; }
+const SCHED_HEADER = ["slug","title","angle","scheduled_et","scheduled_ar","status","media","notes"];
+function parseSchedule(text){
+  const lines = (text || "").replace(/\r\n/g,"\n").split("\n").filter(l => l.length);
+  if (!lines.length) return [];
+  const header = parseCSVLine(lines[0]);
+  return lines.slice(1).map(l => { const vals = parseCSVLine(l); const o = {};
+    header.forEach((h,i) => o[h] = vals[i] ?? ""); return o; });
+}
+function stringifySchedule(rows){
+  const lines = [SCHED_HEADER.join(",")];
+  rows.forEach(r => lines.push(SCHED_HEADER.map(h => csvField(r[h])).join(",")));
+  return lines.join("\n") + "\n";
+}
+async function upsertScheduleRow(slug, fields){
+  const path = "data/schedule.csv";
+  const raw = await ghText(path);
+  const rows = parseSchedule(raw);
+  let row = rows.find(r => r.slug === slug);
+  if (!row){ row = { slug }; rows.push(row); }
+  Object.assign(row, fields);
+  SCHED_HEADER.forEach(h => { if (row[h] == null) row[h] = ""; });
+  const sha = await ghSha(path);
+  await ghPut(path, stringifySchedule(rows), `Reschedule ${slug} via Pulse`, sha);
+}
+function addHourET(hhmm){
+  const [h,m] = hhmm.split(":").map(Number);
+  return String((h + 1) % 24).padStart(2,"0") + ":" + String(m).padStart(2,"0");
+}
+function openReschedule(){
+  const p = detailPost;
+  const slot = $("resched-slot");
+  if (slot.dataset.open === "1"){ cancelReschedule(); return; }
+  const schedDate = p.fm.scheduled_et ? p.fm.scheduled_et.slice(0,10) : "";
+  const etTime = p.fm.scheduled_et ? p.fm.scheduled_et.split(" ")[1] : "10:30";
+  const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
+  slot.dataset.open = "1";
+  slot.innerHTML = `
+    <div class="card" style="margin-top:12px">
+      <label>📅 Publish date</label>
+      <input type="date" id="rs-date" value="${schedDate || tmr.toISOString().slice(0,10)}" min="${todayISO()}">
+      <label>⏰ Time (US-Eastern)</label>
+      <input type="time" id="rs-time" value="${etTime}">
+      <div class="hint">Argentina time is set automatically (ET + 1h). The publisher checks this
+      slot once the 10am–1pm ET window opens on that date.</div>
+      <button class="btn" onclick="saveReschedule()">Save new date</button>
+      ${schedDate ? `<button class="btn ghost" onclick="clearSchedule()">↩ Move back to pool (no fixed date)</button>` : ""}
+      <button class="btn ghost" onclick="cancelReschedule()">Cancel</button>
+    </div>`;
+}
+function cancelReschedule(){ const s = $("resched-slot"); s.dataset.open = ""; s.innerHTML = ""; }
+async function moveAndSave(p, newDir, fmUpdates){
+  const newFmBlock = setFrontmatter(p.fmBlock, fmUpdates);
+  const newRaw = newFmBlock + p.text.trim() + "\n" + (p.rest ? "\n" + p.rest.replace(/^\r?\n/,"") : "");
+  const oldPath = `${p.dir}/${p.name}`, newPath = `${newDir}/${p.name}`, sameDir = p.dir === newDir;
+  const sha = sameDir ? await ghSha(oldPath) : null;
+  await ghPut(newPath, newRaw, `Reschedule ${p.name} via Pulse`, sha);
+  if (!sameDir) await ghDelete(oldPath, `Move ${p.name} (rescheduled via Pulse)`);
+  p.fmBlock = newFmBlock; p.dir = newDir;
+  Object.keys(fmUpdates).forEach(k => p.fm[k] = fmUpdates[k]);
+}
+async function saveReschedule(){
+  const dateStr = $("rs-date").value, etTime = $("rs-time").value;
+  if (!dateStr || !etTime){ toast("Pick a date and time"); return; }
+  const slot = $("resched-slot");
+  slot.querySelectorAll("button").forEach(b => b.disabled = true);
+  const p = detailPost;
+  try{
+    const et = `${dateStr} ${etTime} EDT`, ar = `${dateStr} ${addHourET(etTime)} ART`;
+    await moveAndSave(p, "posts/ready", { scheduled_et: et, scheduled_ar: ar, status: "scheduled" });
+    await upsertScheduleRow(p.fm.slug || p.name.replace(/\.md$/,""), {
+      title: p.fm.title || "", angle: p.fm.angle || "", scheduled_et: et, scheduled_ar: ar,
+      status: "scheduled", media: p.fm.media || "" });
+    cancelReschedule();
+    toast(`✅ Scheduled for ${fmtDate(dateStr)} at ${etTime} ET`);
+    openDetail(queueCache.indexOf(p));
+  }catch(e){ slot.querySelectorAll("button").forEach(b => b.disabled = false); toast("⚠️ " + e.message, 4000); }
+}
+async function clearSchedule(){
+  const slot = $("resched-slot");
+  slot.querySelectorAll("button").forEach(b => b.disabled = true);
+  const p = detailPost;
+  try{
+    await moveAndSave(p, "posts/pool", { scheduled_et: "", scheduled_ar: "", status: "pool" });
+    await upsertScheduleRow(p.fm.slug || p.name.replace(/\.md$/,""), { status: "pool", scheduled_et: "", scheduled_ar: "" });
+    cancelReschedule();
+    toast("↩ Back in the pool — no fixed date");
+    openDetail(queueCache.indexOf(p));
+  }catch(e){ slot.querySelectorAll("button").forEach(b => b.disabled = false); toast("⚠️ " + e.message, 4000); }
 }
 
 /* ====== METRICS (fully automated — harvested from LinkedIn notification emails) ====== */

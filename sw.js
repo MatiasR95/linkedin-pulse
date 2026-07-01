@@ -1,4 +1,4 @@
-const CACHE = "pulse-v4";
+const CACHE = "pulse-v5";
 self.addEventListener("install", e => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(clients.claim()));
 // Network-first for same-origin shell files; never cache GitHub API calls.

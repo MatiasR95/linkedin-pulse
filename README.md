@@ -19,7 +19,6 @@ you keep on your phone.
 - 📊 **Metrics** — fully automatic: a cloud routine harvests LinkedIn's notification emails
   weekly into the data CSVs; the app shows trends + suggested actions. Zero manual input.
 - ✍️ **Compose** — braindump an idea (EN or ES); Claude drafts it on the next cloud run.
-- 📰 **News** — daily trending Data/BI/AI topics scouted by a cloud routine.
 
 The engine itself runs fully in the cloud — the app is just the window. Skipping the app
 for a week changes nothing.
